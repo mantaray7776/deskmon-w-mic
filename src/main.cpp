@@ -95,65 +95,47 @@ static void run_selftest() {
 
 void setup() {
     Serial.begin(115200);
-    delay(500); // let serial settle
+    delay(2000);
+    Serial.println("=== SETUP START ===");
 
     run_selftest();
 
-    // ── Create global mutex before any task starts ────────────────────────
     g_state_mutex = xSemaphoreCreateMutex();
     configASSERT(g_state_mutex);
 
-    // ── Default session config ────────────────────────────────────────────
     g_state.session.session_duration = SESSION_DEFAULT_SEC;
-    g_state.session.active           = false;
+    g_state.session.active = false;
 
-    // ── Sensor init (blocking — must succeed before tasks start) ─────────
+    Serial.println("=== SENSOR INIT ===");
     if (!sensor_init()) {
-        log_e("FATAL: sensor init failed — halting");
+        Serial.println("FATAL: sensor init failed");
         while (true) delay(1000);
     }
 
-    // ── Display init ──────────────────────────────────────────────────────
+    Serial.println("=== DISPLAY INIT ===");
     if (!display_init()) {
-        log_w("Display init partial — continuing anyway");
+        Serial.println("Display init partial");
     }
 
+    Serial.println("=== MIC INIT ===");
     if (!mic_init()) {
-    log_w("MicTask: INMP441 init failed — noise_db will stay 0");
-}
+        Serial.println("Mic init failed");
+    }
 
-    // ── Optional hardware init ────────────────────────────────────────────
-#if FEATURE_ENCODER
-    s_enc.attachHalfQuad(PIN_ENC_A, PIN_ENC_B);
-    s_enc.setCount(0);
-    pinMode(PIN_ENC_SW, INPUT_PULLUP);
-#endif
-
-#if FEATURE_BATT
-    analogReadResolution(12);
-    analogSetAttenuation(ADC_11db); // 0–3.3 V range
-#endif
-
-    // ── Spawn FreeRTOS tasks ──────────────────────────────────────────────
+    Serial.println("=== SPAWNING TASKS ===");
     xTaskCreatePinnedToCore(SensorTask,  "sensor",   STACK_SENSOR,   nullptr, PRI_SENSOR,   nullptr, CORE_SENSOR);
     xTaskCreatePinnedToCore(DisplayTask, "display",  STACK_DISPLAY,  nullptr, PRI_DISPLAY,  nullptr, CORE_DISPLAY);
     xTaskCreatePinnedToCore(WebTask,     "web",      STACK_WEB,      nullptr, PRI_WEB,      nullptr, CORE_WEB);
     xTaskCreatePinnedToCore(DistractTask,"distract", STACK_DISTRACT, nullptr, PRI_DISTRACT, nullptr, CORE_DISTRACT);
     xTaskCreatePinnedToCore(SessionTask, "session",  STACK_SESSION,  nullptr, PRI_SESSION,  nullptr, CORE_SESSION);
-    xTaskCreatePinnedToCore(MicTask, "mic", 3072, nullptr, 2, nullptr, CORE_DISTRACT);
+    xTaskCreatePinnedToCore(MicTask,     "mic",      3072,           nullptr, 2,            nullptr, CORE_DISTRACT);
 
-#if FEATURE_BATT
-    xTaskCreatePinnedToCore(BattTask, "batt", 2048, nullptr, 1, nullptr, CORE_SESSION);
-#endif
-#if FEATURE_ENCODER
-    xTaskCreatePinnedToCore(EncoderTask, "encoder", 2048, nullptr, 2, nullptr, CORE_SESSION);
-#endif
-
-    log_i("All tasks spawned — DeskMon running");
+    Serial.println("=== DONE ===");
 }
 
 // loop() is unused — all work is in FreeRTOS tasks
 // Give the idle task something clean to do
 void loop() {
     vTaskDelay(pdMS_TO_TICKS(10000));
+
 }

@@ -20,8 +20,8 @@
 #define PIN_MIC_SD          40
 #define MIC_SAMPLE_RATE     16000
 #define MIC_BUF_LEN         512
-#define NOISE_QUIET_DB      50.0f
-#define NOISE_LOUD_DB       75.0f
+#define NOISE_QUIET_DB      65.0f
+#define NOISE_LOUD_DB       90.0f
 
 // ── SPI (shared bus) ─────────────────────────────────────────────────────────
 #ifndef PIN_MOSI
@@ -132,8 +132,8 @@
 #define BREAK_LONG_SEC      (15 * 60)
 
 // ── Sensor thresholds (tunable via WebSocket config packet) ──────────────────
-#define IMPACT_THRESHOLD    0.8f        // m/s² RMS delta to count as impact
-#define EM_SPIKE_THRESHOLD  8.0f        // µT variance to count as EM spike
+#define IMPACT_THRESHOLD    0.2f    // vib معمولاً 0.05–0.09 هست
+#define EM_SPIKE_THRESHOLD  200.0f   // em معمولاً زیر 130 هست
 #define MOVING_THRESHOLD    0.15f       // m/s² to consider device moving
 
 // ── Task stack / priority ────────────────────────────────────────────────────
