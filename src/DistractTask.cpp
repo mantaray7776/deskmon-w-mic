@@ -1,17 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  DistractTask.cpp  — computes distraction score from motion + EM data
+//  DistractTask.cpp  — computes distraction score from motion + EM + noise
 // ─────────────────────────────────────────────────────────────────────────────
 #include <cmath>
-#include <algorithm> // Alternative for fmin/fmax
+#include <algorithm>
 #include "Config.h"
 #include "NavState.h"
+#include <Arduino.h>
 
-// Distraction score: 0–100, exponential moving average of vibration + EM spikes
-// Score decays toward 0 when the desk is calm, spikes toward 100 on events.
 void DistractTask(void* pvParams) {
-    const float DECAY  = 0.98f;   // per 100 ms tick → half-life ~3 s
-    const float VIB_W  = 60.0f;   // vibration contribution weight
-    const float EM_W   = 40.0f;   // EM contribution weight
     const float DECAY   = 0.98f;
     const float VIB_W   = 40.0f;
     const float EM_W    = 30.0f;
@@ -23,25 +19,19 @@ void DistractTask(void* pvParams) {
     while (true) {
         NavState st = state_snapshot();
 
-        // Normalised contributions (clamp to 0–1)
-        float vib_norm = fminf(st.motion.vibration_rms / IMPACT_THRESHOLD, 1.0f);
-        float em_norm  = fminf(st.motion.em_variance   / EM_SPIKE_THRESHOLD, 1.0f);
+        float vib_norm   = fminf(st.motion.vibration_rms / IMPACT_THRESHOLD, 1.0f);
+        float em_norm    = fminf(st.motion.em_variance   / EM_SPIKE_THRESHOLD, 1.0f);
+        float noise_norm = fminf(fmaxf((st.motion.noise_db - NOISE_QUIET_DB) /
+                                       (NOISE_LOUD_DB - NOISE_QUIET_DB), 0.0f), 1.0f);
 
-
-    float vib_norm   = fminf(st.motion.vibration_rms / IMPACT_THRESHOLD, 1.0f);
-    float em_norm    = fminf(st.motion.em_variance   / EM_SPIKE_THRESHOLD, 1.0f);
-    float noise_norm = fminf(fmaxf((st.motion.noise_db - NOISE_QUIET_DB) /(NOISE_LOUD_DB - NOISE_QUIET_DB), 0.0f), 1.0f);
-
-    float raw = vib_norm * VIB_W + em_norm * EM_W + noise_norm * NOISE_W;
-
-        float raw = vib_norm * VIB_W + em_norm * EM_W;
+        float raw = vib_norm * VIB_W + em_norm * EM_W + noise_norm * NOISE_W;
         score = score * DECAY + raw * (1.0f - DECAY) * 100.0f;
         score = fminf(fmaxf(score, 0), 100);
-
+        log_i("noise=%.1f dB  distract=%d", st.motion.noise_db, (int)score);
         WITH_STATE([&]{
             g_state.session.distraction_score = (uint8_t)score;
         });
 
-        vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(100)); // 10 Hz
+        vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(100));
     }
 }
