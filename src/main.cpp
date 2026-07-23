@@ -128,7 +128,7 @@ void setup() {
     xTaskCreatePinnedToCore(WebTask,     "web",      STACK_WEB,      nullptr, PRI_WEB,      nullptr, CORE_WEB);
     xTaskCreatePinnedToCore(DistractTask,"distract", STACK_DISTRACT, nullptr, PRI_DISTRACT, nullptr, CORE_DISTRACT);
     xTaskCreatePinnedToCore(SessionTask, "session",  STACK_SESSION,  nullptr, PRI_SESSION,  nullptr, CORE_SESSION);
-    xTaskCreatePinnedToCore(MicTask,     "mic",      3072,           nullptr, 2,            nullptr, CORE_DISTRACT);
+    xTaskCreatePinnedToCore(MicTask,     "mic",      6144,           nullptr, 2,            nullptr, CORE_DISTRACT);
 
     Serial.println("=== DONE ===");
 }
